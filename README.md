@@ -15,6 +15,6 @@ roms:
 https://github.com/Timendus/chip8-test-suite
 
 ```
-go run . path/to/rom
+go run . -path path/to/rom
 ```
 
