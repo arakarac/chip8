@@ -20,7 +20,7 @@ func sdlInit() {
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic("SDL init fail")
 	}
-	//defer sdl.Quit()	fmt.Printf("DEBUG: dopo Init, PC=0x%X\n", cpu.pc
+	//defer sdl.Quit()
 
   var err error
 	window, err = sdl.CreateWindow("Chip8", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, w*mod, h*mod, sdl.WINDOW_SHOWN)
@@ -61,6 +61,7 @@ func (c *chip8) render() {
 
 func sdlEnd() {
 	window.Destroy()
+	renderer.Destroy()
 	sdl.Quit()
 }
 
