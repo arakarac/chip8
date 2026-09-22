@@ -36,7 +36,6 @@ func (c *chip8) load(path string) {
   }
 
 	bufferSize := len(buffer)
-	//mem := c.mem
 
 	for i := 0; i < bufferSize ; i++ {
 		c.mem[i + 512] = buffer[i]
@@ -57,6 +56,5 @@ func main() {
       cpu.render()
 	  }
 	}
-  //sdl.Delay(1000 / 60)
 }
 

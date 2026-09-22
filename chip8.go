@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 )
 
@@ -18,7 +19,7 @@ type chip8 struct {
 	v          [16]uint8        // variable registers, V0 through VF
 	ir         uint16          // index register, used to point at locations in memory
 	pc         uint16          // program counter, points at the current instruction in memory
-	keys       [16]uint16
+	key        [16]int
 	display    [height][width]uint8  // 64x32
 	stack      [addrSize]uint16 // call functions and return from them
 	op         uint16          // opcode
@@ -46,6 +47,7 @@ func (c *chip8) cycle() {
 
 	x := int((c.op & 0x0F00) >> 8)
 	y := int((c.op & 0x00F0) >> 4)
+	f := int(0xF)
 	n := int(c.op & 0x000F)
   nn := uint8(c.op & 0x00FF)
 	nnn := c.op &  0x0FFF
@@ -62,18 +64,84 @@ func (c *chip8) cycle() {
       c.pc = c.stack[c.sp]
       c.increment()
 		}
+	case 0x2000:
+    c.stack[c.sp] = c.pc
+		c.sp++
+    c.pc = nnn
 	case 0x1000:    //1NNN
 		c.pc = nnn
+	case 0x3000:
+		c.increment()
+    if c.v[x] == nn {
+			c.increment()
+	  }
+	case 0x4000:   //4XNN
+		c.increment()
+	  if c.v[x] != nn {
+			c.increment()
+		}
+	case 0x5000:   //5XY0
+		c.increment()
+    if c.v[x] == c.v[y] {
+			c.increment()
+		}
 	case 0x6000:    //6XNN
     c.v[x] = uint8(nn)
 		c.increment()
 	case 0x7000:    //7XNN
     c.v[x] += uint8(nn)
 	  c.increment()
+	case 0x8000:     //math ops
+    switch c.op & 0x000F {
+		case 0x0000:
+      c.v[x] = c.v[y]
+			c.increment()
+		case 0x0001:
+      c.v[x] |= c.v[y]
+			c.increment()
+		case 0x0002:
+      c.v[x] &= c.v[y]
+			c.increment()
+		case 0x0003:
+      c.v[x] ^= c.v[y]
+			c.increment()
+		case 0x0004:
+      c.v[x] += c.v[y]
+			c.increment()
+		case 0x0005:
+      c.v[x] -= c.v[y]
+			c.increment()
+		case 0x0006:
+      c.v[x] = c.v[x] >> 1
+			c.v[f] = c.v[x] & 0x1
+			c.increment()
+		case 0x0007:
+			if c.v[y] >= c.v[x] {
+				c.v[f] = 1
+			} else {
+				c.v[f] = 0
+			}
+      c.v[x] = c.v[x] - c.v[y]
+			c.increment()
+		case 0x000E:
+			c.v[f] = c.v[x] >> 7
+      c.v[x] = c.v[x] << 1
+      c.increment()
+		}
+	case 0x9000:    //9XY0
+		c.increment()
+    if c.v[x] != c.v[y] {
+			c.increment()
+		}
 	case 0xA000:    //ANNN
     c.ir = nnn
 		c.increment()
-	case 0xD000:    //DXYN, n = height, number of rows / p = pixel
+	case 0xB000:    //BNNN
+    c.pc = uint16(c.v[0x0]) + nnn
+	case 0xC000:    //CXNN
+    c.v[x] = uint8(rand.Intn(255)) & nn
+		c.increment()
+	case 0xD000:    //DXYN, n = height, number of rows, N / p = pixel
     c.v[0xF] = 0
 		vy := int(c.v[y] % height)
 		vx := int(c.v[x] % width)
@@ -83,7 +151,6 @@ func (c *chip8) cycle() {
 				if (p & (0x80 >> i)) != 0 {
 					py := (vy + j) % height
 					px := (vx + int(i)) % width
-					//sp := py * width + px
           if c.display[py][px] == 1 {
 				  c.v[0xF] = 1 // collision detection
 				  }
@@ -93,10 +160,44 @@ func (c *chip8) cycle() {
 		}
     c.canDraw = true
 		c.increment()
+	case 0xE000: 
+	switch c.op & 0x00FF {   //input ops
+	  case 0x009E:  //EX9E
+      c.increment()
+		  if c.key[c.v[x]] != 0 {
+				c.increment()
+			}
+		case 0x00A1:  //EXA1
+      c.increment()
+		  if c.key[c.v[x]] == 0 {
+				c.increment()
+			}
+		}
+	case 0xF000:
+	switch c.op & 0x00FF {
+		case 0x0007:
+    
+		case 0x000A:
+
+		case 0x0015:
+
+		case 0x0018:
+
+		case 0x001E:
+
+		case 0x0029:
+
+		case 0x0033:
+
+		case 0x0055:
+
+		case 0x0065:
+
+		}
 	}
 
   if c.dTimer > 0 {
-  		c.dTimer--
+  	c.dTimer--
   }
   if c.sTimer > 0 {
 		if c.sTimer == 1 {
@@ -104,8 +205,6 @@ func (c *chip8) cycle() {
 		}
 	  c.sTimer--
 	}
-
-	//fmt.Println(c.op)
 }
 
 func (c *chip8) buffer() [32][64]uint8 {
