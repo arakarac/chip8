@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-  //"github.com/veandco/go-sdl2/sdl"
+	"time"
 )
 
 var (
@@ -48,13 +48,24 @@ func main() {
 	cpu := Init()
 	sdlInit()
   cpu.load(ROM)
-	//f := os.Args[2]
-	//fmt.Println("rom path: " + f)
-	for {
-	  cpu.cycle()
-	  if cpu.draw() {
-      cpu.render()
-	  }
+	if cpu.isRunning() {
+		for {
+			cpu.getInput()
+			start := time.Now()
+			for i := 0; i < cycles; i++ {
+        cpu.cycle()
+			  if cpu.draw() {
+				  cpu.render()
+			  }
+			}
+      past := time.Since(start)
+			if past < seconds  {
+				time.Sleep(seconds - past)
+			}
+
+		}
+	} else {
+		  os.Exit(0)
 	}
 }
 

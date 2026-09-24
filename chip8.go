@@ -9,7 +9,8 @@ import (
 const (
 	mSize = 4096
 	addrSize = 16
-	hz = time.Duration(600)
+	cycles = 10
+	seconds = time.Second / 60 
 	width = 64 
 	height = 32
 )
@@ -27,6 +28,7 @@ type chip8 struct {
 	dTimer     uint16          // delay timer 
 	sTimer     uint16          // sound timer
 	canDraw    bool
+	running    bool
 }
 
 func (c *chip8) increment() {
@@ -37,6 +39,7 @@ func Init() chip8 {
 	cpu := chip8{
 		canDraw: true,
 		pc: 0x200,
+		running: true,
 	}
   cpu.loadFont()
 	return cpu
@@ -164,7 +167,7 @@ func (c *chip8) cycle() {
 	switch c.op & 0x00FF {   //input ops
 	  case 0x009E:  //EX9E
       c.increment()
-		  if c.key[c.v[x]] != 0 {
+		  if c.key[c.v[x]] == 1 {
 				c.increment()
 			}
 		case 0x00A1:  //EXA1
@@ -175,24 +178,48 @@ func (c *chip8) cycle() {
 		}
 	case 0xF000:
 	switch c.op & 0x00FF {
-		case 0x0007:
-    
-		case 0x000A:
-
-		case 0x0015:
-
-		case 0x0018:
-
-		case 0x001E:
-
-		case 0x0029:
-
-		case 0x0033:
-
-		case 0x0055:
-
-		case 0x0065:
-
+		case 0x0007:  //FX07
+      c.v[x] = uint8(c.dTimer)
+		  c.increment()
+		case 0x000A:     //FX0A !!! NOT HALTING !!! :(
+			for i := 0; i < len(c.key); i++ {
+				if c.key[i] == 1 {
+					c.v[x] = uint8(i)
+				}
+				if c.key[i] == 0 {
+					fmt.Println("no key pressed")
+				}
+			}
+      c.increment()
+		case 0x0015:   //FX15
+      c.dTimer = uint16(c.v[x])
+		  c.increment()
+		case 0x0018:  //FX18
+      c.dTimer = uint16(c.v[x])
+		  c.increment()
+		case 0x001E:  //FX1E
+      c.ir += uint16(c.v[x])
+		  c.increment()
+		case 0x0029:  //FX29
+      c.ir = uint16(c.v[x] * 0x5)
+		  c.increment()
+		case 0x0033:   //FX33
+      c.mem[c.ir] = c.v[x] / 100
+			c.mem[c.ir + 1] = (c.v[x] / 10) % 10
+      c.mem[c.ir + 2] = (c.v[x] % 100) % 10
+			c.increment()
+		case 0x0055:   //FX55
+      for i := 0; i <= x ; i++ {
+        c.mem[c.ir + uint16(i)] = c.v[i]
+			}
+			c.ir = uint16(x) + 1
+		  c.increment()
+		case 0x0065:   //FX65
+			for i := 0; i <= x; i++ {
+        c.v[i] = c.mem[c.ir + uint16(i)]
+			}
+      c.ir = uint16(x) + 1
+		  c.increment()
 		}
 	}
 
@@ -225,3 +252,8 @@ func (c *chip8) draw() bool {
 	return b
 }
 
+func (c *chip8) isRunning() bool {
+	b := c.running
+	c.running = false
+	return b
+}
