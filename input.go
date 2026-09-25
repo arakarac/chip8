@@ -3,7 +3,6 @@ package main
 import (
 	//"fmt"
 	"os"
-
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -42,6 +41,5 @@ func (c *chip8) getInput() {
 			}
 		}
 	}
-	sdl.Delay(1000 / 60)
 }
 
